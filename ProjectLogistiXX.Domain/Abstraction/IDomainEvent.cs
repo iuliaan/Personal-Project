@@ -6,8 +6,8 @@ namespace ProjectLogistiXX.Domain.Abstraction
 {
     public interface IDomainEvent
     {
-        Guid Is { get; }
+        //Guid Is { get; }
 
-        DateTime OccurredOn { get; }
+        //DateTime OccurredOn { get; }
     }
 }

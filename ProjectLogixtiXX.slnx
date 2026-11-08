@@ -1,9 +1,20 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="ProjectLogistiXX.Application/ProjectLogistiXX.Application.csproj" />
-    <Project Path="ProjectLogistiXX.Domain/ProjectLogistiXX.Domain.csproj" />
-    <Project Path="ProjectLogistiXX.Infrastructure/ProjectLogistiXX.Infrastructure.csproj" />
-    <Project Path="ProjectLogistiXX.Presentation/ProjectLogistiXX.Presentation.csproj" />
     <Project Path="ProjectLogistiXX.Test/ProjectLogistiXX.Test.csproj" />
+  </Folder>
+  <Folder Name="/src/Application/">
+    <Project Path="ProjectLogistiXX.Application/ProjectLogistiXX.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/Domain/">
+    <Project Path="ProjectLogistiXX.Domain/ProjectLogistiXX.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/Infrastructure/">
+    <Project Path="ProjectLogistiXX.Infrastructure/ProjectLogistiXX.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/SharedKernel/">
+    <Project Path="ProjectLogistiXX.SharedKernel/ProjectLogistiXX.SharedKernel.csproj" Id="198bca25-9629-4456-a156-2da74d2cf439" />
+  </Folder>
+  <Folder Name="/src/Web.Api/">
+    <Project Path="ProjectLogistiXX.Presentation/ProjectLogistiXX.Presentation.csproj" />
   </Folder>
 </Solution>

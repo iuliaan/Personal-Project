@@ -1,21 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using ProjectLogistiXX.Domain.Abstraction;
 
 namespace ProjectLogistiXX.Domain.Common
 {
     public abstract class BaseEntity
     {
-        public int Id { get; set; }
-        public DateTime CreatedAt { get; set; }
+        private readonly List<IDomainEvent> _domainEvents = [];
+        public DateTime CreatedAt { get; private set; }
+
+        public DateTime? UpdatedAt { get; private set; }
 
         public bool IsDeleted { get; protected set; }
 
-
-
         protected BaseEntity()
         {
-            CreatedAt = DateTime.UtcNow;
+
         }
+
+        public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+        protected void AddDomainEvent(IDomainEvent domainEvent)
+        {
+            _domainEvents.Add(domainEvent);
+        }
+
+        public void ClearDomainEvents()
+        {
+            _domainEvents.Clear();
+        }
+
+        protected void MarkAsDeleted()
+        {
+            IsDeleted = true;
+            MarkAsUpdated();
+        }
+
+        protected virtual void MarkAsUpdated()
+        {
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+
     }
 }

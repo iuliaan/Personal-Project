@@ -1,24 +1,26 @@
 ﻿using ProjectLogistiXX.Domain.Abstraction;
-using ProjectLogistiXX.Domain.Common;
-using ProjectLogistiXX.Domain.Entities;
-using ProjectLogistiXX.Domain.ErrorsMessage;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using ProjectLogistiXX.Domain.ExtensionMethod;
+using ProjectLogistiXX.SharedKernel;
 
-namespace ProjectLogistiXX.Domain.ValueObject
+namespace ProjectLogistiXX.Domain.ValueObjects
 {
     public sealed record PhoneNumber
     {
-        private const int MaxLenghtForRomania = 10; // Ex: 0744 123 456
-        private const int MaxLengthForInternational = 15;
+        private const int MaxLenghtForRomania = 10;
         private const string FirstPrefixForRomania = "+40";
-        private const string SecondPrefixForRomania = "004";
-        public string Value { get; }
+        private const string SecondPrefixForRomania = "0040";
+        private const int MaxLengthPhoneNumber = 25;
+        private static readonly Error TooLong = Error.Validation("PhoneNumberTooLong", "Numarul de telefon este prea lung.");
+        private static readonly Error TooShort = Error.Validation("PhoneNumberTooShort", "Numarul de telefon este prea scurt.");
+        private static readonly Error NullOrEmpty = Error.Validation("PhoneNumberNullOrEmpty", "Numarul de telefon este obligatoriu");
+        private static readonly Error InvalidCharacter = Error.Validation("PhoneNumberInvalidCharacter", 
+            "Numarul de telefon nu poate contine litere sau simboluri");
+        private static readonly HashSet<char> Separators = [' ', '-', '.', '(', ')'];
+        public string Value { get; init; } = string.Empty;
 
-        private PhoneNumber(string phoneNumber)
+        internal PhoneNumber(string value)
         {
-            Value = phoneNumber;
+            Value = value;
         }
 
         public string ToDatabaseFormat()
@@ -26,32 +28,43 @@ namespace ProjectLogistiXX.Domain.ValueObject
             return FormatPhoneNumberForDatabase(Value);
         }
 
-        public static Result<PhoneNumber> Create(string numberPhone)
+        public string DisplayFormat()
+        {
+            return FormatPhoneNumberForDisplay(Value);
+        }
+
+        public static Result<PhoneNumber> Create(string? numberPhone)
         {
             if (string.IsNullOrWhiteSpace(numberPhone))
             {
-                return Result<PhoneNumber>.Failure(PhoneNumberErrors.NullOrEmpty);
+                return Result<PhoneNumber>.Failure(NullOrEmpty);
             }
 
-            var normalizedPhoneNumber = NormalizePhoneNumber(numberPhone);
 
-            if (!normalizedPhoneNumber.IsSuccess)
-            {
-                return normalizedPhoneNumber.Error;
-            }
+            return ExtractValidateCharacters(numberPhone)
+                .Map(NormalizeToLocalFormat)
+                .Bind(CheckLenghtFormatForPhoneNumber)
+                .Map(validatedNumber => new PhoneNumber(validatedNumber));
 
-            var validationResult = CleanPhoneNumber(normalizedPhoneNumber.Value);
-            if (!validationResult.IsSuccess)
-            {
-                return normalizedPhoneNumber.Error;
-            }
-
-            return new PhoneNumber(validationResult.Value);
-
-            //return Result<PhoneNumber>.Success(new PhoneNumber(FormatPhoneNumberForDisplay(normalizedPhoneNumber.Value)));
         }
 
-        private static Result<string> NormalizePhoneNumber(string phoneNumber)
+        private static Result<string> ExtractValidateCharacters(string phoneNumber)
+        {
+            if (phoneNumber.AsSpan().IsDigitsOnly())
+            {
+                return phoneNumber;
+            }
+
+            if (phoneNumber.Length > MaxLengthPhoneNumber)
+            {
+                return Result<string>.Failure(TooLong);
+            }
+
+            return ParseAndCleanCharacters(phoneNumber);
+
+        }
+
+        private static Result<string> ParseAndCleanCharacters(string phoneNumber)
         {
             Span<char> buffer = stackalloc char[phoneNumber.Length];
             int index = 0;
@@ -63,70 +76,63 @@ namespace ProjectLogistiXX.Domain.ValueObject
                     continue;
                 }
 
-                if (char.IsLetter(c) || char.IsSymbol(c) || (c == '+' && index != 0))
+                if ((c == '+' && index == 0))
                 {
-                    return Result<string>.Failure(Error.Validation("PhoneNumberInvalidCharacter",
-                        "Numarul de telefon nu poate contine litere sau simboluri"));
+                    buffer[index++] = '+';
+                    continue;
+                }
+
+                if (!char.IsDigit(c))
+                {
+                    return Result<string>.Failure(InvalidCharacter);
                 }
 
                 buffer[index++] = c;
             }
 
-            if (phoneNumber.StartsWith(FirstPrefixForRomania))
+            return new string(buffer[..index]);
+        }
+
+        private static string NormalizeToLocalFormat(string cleanedNumber)
+        {
+            if (cleanedNumber.StartsWith(FirstPrefixForRomania))
             {
-                phoneNumber = phoneNumber[(FirstPrefixForRomania.Length - 1)..];
+                return "0" + cleanedNumber[FirstPrefixForRomania.Length..];
             }
-            else if (phoneNumber.StartsWith(SecondPrefixForRomania))
+
+            if (cleanedNumber.StartsWith(SecondPrefixForRomania))
             {
-                phoneNumber = phoneNumber[(SecondPrefixForRomania.Length - 1)..];
+                return "0" + cleanedNumber[SecondPrefixForRomania.Length..];
+            }
+
+
+            return cleanedNumber;
+        }
+
+        private static Result<string> CheckLenghtFormatForPhoneNumber(string phoneNumber)
+        {
+            if (phoneNumber.Length > MaxLenghtForRomania)
+            {
+                return Result<string>.Failure(TooLong);
+            }
+
+            if (phoneNumber.Length < MaxLenghtForRomania)
+            {
+                return Result<string>.Failure(TooShort);
             }
 
             return phoneNumber;
-
-        }
-
-        private static Result<string> CleanPhoneNumber(string phoneNumber)
-        {
-            if (phoneNumber.Any(c => !char.IsDigit(c)))
-            {
-                return Result<string>.Failure(Error.Validation("PhoneNumberInvalid",
-                    "Numarul de telefon nu poate contine litere."));
-            }
-
-            if (phoneNumber.Length > MaxLenghtForRomania)
-            {
-                return Result<string>.Failure(Error.Validation("PhoneNumberTooLong",
-                    $"Numarul de telefon nu poate avea mai mult de {MaxLenghtForRomania} cifre."));
-            }
-
-            return Result<string>.Success(phoneNumber);
-
         }
 
         private static string FormatPhoneNumberForDatabase(string phoneNumber)
         {
-            string dataBaseFormat = phoneNumber.Replace(" ", "");
-            return FirstPrefixForRomania + dataBaseFormat[1..];
+            return FirstPrefixForRomania + phoneNumber[1..];
         }
 
         private static string FormatPhoneNumberForDisplay(string phoneNumber)
         {
-            return $" {phoneNumber[..3]} {phoneNumber.Substring(3, 3)} {phoneNumber[6..]}";
+            return $" {phoneNumber[..3]} {phoneNumber[3..6]} {phoneNumber[6..]}";
         }
 
-        private static readonly HashSet<char> Separators = [' ', '-', '.', '(', ')'];
-
-        private static void ValidatePhoneNumberFormat(string phoneNumber)
-
-        {
-            if (string.IsNullOrWhiteSpace(phoneNumber))
-            {
-                throw new DomainException("Numărul de telefon nu poate fi gol.");
-            }
-
-
-            // Aici puteți adăuga logica de validare a formatului numărului de telefon
-            // De exemplu, puteți verifica dacă numărul conține doar cifre și caractere permise
-        }
     }
 }

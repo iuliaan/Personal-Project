@@ -6,4 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="ProjectLogistiXX.Infrastructure" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\ProjectLogistiXX.SharedKernel\ProjectLogistiXX.SharedKernel.csproj" />
+	</ItemGroup>
+
 </Project>

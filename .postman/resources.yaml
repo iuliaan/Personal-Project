@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: 9c6d24ab-1a9a-4d1f-80d8-a725f90a5f8b
+
+localResources:
+  docs:
+    - ..\ProjectLogistiXX.Presentation\wwwroot\lib\jquery-validation\LICENSE.md
